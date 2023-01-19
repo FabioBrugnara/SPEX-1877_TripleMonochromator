@@ -396,36 +396,41 @@ void loop() {
 
     // FILTER
     else if (strcmp(splitCom[0], "filter") == 0) {
-
-      if (strcmp(splitCom[1], "set_speed") == 0){
-        if (atoi(splitCom[2]) > 0 && atoi(splitCom[2]) <= filterMotorMaxSpeed){
-          filterMotorSpeed = atoi(splitCom[2]);
+        
+        if (strcmp(splitCom[1], "set_speed") == 0){
+          if (atoi(splitCom[2]) > 0 && atoi(splitCom[2]) <= filterMotorMaxSpeed){
+            filterMotorSpeed = atoi(splitCom[2]);
+            Serial.print("ok\n"); }
+          else
+            Serial.print("error: speed out of range\n");
+        }
+        else if (strcmp(splitCom[1], "read_speed") == 0){
+          Serial.print(filterMotorSpeed);
+          Serial.print("\n");
           Serial.print("ok\n"); }
+  
+        else if (strcmp(splitCom[1], "read_pos") == 0){
+          Serial.print(filterPos);
+          Serial.print("\n");
+  
+          if (digitalRead(filterStopcw) == HIGH)
+            Serial.print("error: clockwise limit reached\n");
+          else if (digitalRead(filterStopccw) == HIGH)
+            Serial.print("error: counter-clockwise limit reached\n");
+          else
+            Serial.print("ok\n"); }
+  
+        else if (strcmp(splitCom[1], "init_pos") == 0){
+          filterPos = 0;
+          Serial.print("ok\n"); }
+  
+        else if (strcmp(splitCom[1], "goto") == 0)
+          filterGoto(atoi(splitCom[2]));
+        
+        else if (strcmp(splitCom[1], "jump") == 0)
+          filterJump(atoi(splitCom[2]));
         else
-          Serial.print("error: speed out of range\n");
-      }
-
-      else if (strcmp(splitCom[1], "read_speed") == 0){
-        Serial.print(filterMotorSpeed);
-        Serial.print("\n");
-        Serial.print("ok\n"); }
-
-      else if (strcmp(splitCom[1], "read_pos") == 0){
-        Serial.print(filterPos);
-        Serial.print("\n");
-        Serial.print("ok\n"); }
-
-      else if (strcmp(splitCom[1], "init_pos") == 0){
-        filterPos = 0;
-        Serial.print("ok\n"); }
-
-      else if (strcmp(splitCom[1], "goto") == 0)
-        filterGoto(atoi(splitCom[2]));
-      
-      else if (strcmp(splitCom[1], "jump") == 0)
-        filterJump(atoi(splitCom[2]));
-      else
-        Serial.print("error: unknown command\n");
+          Serial.print("error: unknown command\n");
     }
 
     // ERROR: NOT A COMMAND

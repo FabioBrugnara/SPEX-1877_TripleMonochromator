@@ -8,6 +8,10 @@ from time import sleep
 ####################################
 
 def list_serial_ports():
+    '''
+    List all the serial ports available in the system.
+    '''
+
     COM_list = serial.tools.list_ports.comports()
     #port.name
     #port.device
@@ -67,7 +71,7 @@ def connect_motors(verbose=True, Fprint = print):
                 print_fun (function): Function to print the response. Default is print.
 
             Returns:
-                ser (serial.Serial): Serial port object
+                ser (serial.Serial): Serial port object, connected to the spex motor controller.
     '''
 
     COM_list = list_serial_ports()
@@ -116,6 +120,17 @@ def connect_motors(verbose=True, Fprint = print):
 
 
 class motors:
+    '''
+    Class to control the spex motor controller.
+
+            Parameters:
+                port (serial.Serial or str): Serial port object or port name.
+                verbose (bool): Print the response or not
+                Fprint (function): Function to print the response. Default is print.
+
+            Returns:
+                motors (motors): motors object, with the motor connected to the object .
+    '''
 
     def __init__(self, port, verbose=True, Fprint = print):
 
@@ -130,6 +145,20 @@ class motors:
             self.ser = serial.Serial(port=port, baudrate=9600)
         
     def command(self, TXD: str, verbose=None, Fprint = None):
+        '''
+        Send a command to the serial port and return the response, waiting for the 'ok/n' or 'error: <type error> string.
+        The function checks the correct echo of the port and the 'ok/n' terminating string, returning what is in between them.
+        If any error is found, the function raises an exception.
+
+                Parameters:
+                    TXD (str): Command to send
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+                
+                Returns:
+                    RXD (str): A list of responses from the serial port, without the echo line.
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -138,6 +167,17 @@ class motors:
         return command2serial(self.ser, TXD, verbose=verbose, Fprint = Fprint)
 
     def status(self, verbose=None, Fprint = None):
+        '''
+        Print the status of the motors.
+
+                Parameters:
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+                
+                Returns:    
+                    0 (int): 0 (if everything is ok)
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -147,17 +187,21 @@ class motors:
         
         return 0
     
-    def whoareyou(self, verbose=None, Fprint = None):
-        if verbose is None:
-            verbose = self.verbose
-        if Fprint is None:
-            Fprint = self.Fprint
-        
-        RXD = self.command('whoareyou', verbose=verbose, Fprint = Fprint)
-        
-        return RXD[0]
     
     def set_speed(self, motor: str, speed: int, verbose=None, Fprint = None):
+        '''
+        Set the speed of the motor.
+        
+                Parameters:
+                    motor (str): 'spec' or 'filter'
+                    speed (int): speed in steps/s
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+
+                Returns:
+                    0 (int): 0 (if everything is ok)
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -171,6 +215,18 @@ class motors:
         return 0
     
     def read_speed(self, motor: str, verbose=None, Fprint = None):
+        '''
+        Read the speed of the motor.
+
+                Parameters:
+                    motor (str): 'spec' or 'filter'
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+                
+                Returns:
+                    speed (int): speed in steps/s
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -187,6 +243,19 @@ class motors:
         return int(RXD[0])
 
     def read_pos(self, motor: str, verbose=None, Fprint = None):
+        '''
+        Read the position of the motor.
+
+                Parameters:
+                    motor (str): 'spec' or 'filter'
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+
+                Returns:
+                    pos (int): position in steps
+                    limit (int): 0 if no limit is reached, 1 if clockwise limit is reached, -1 if counter-clockwise limit is reached.
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -207,6 +276,18 @@ class motors:
         return int(RXD[0]), limit
 
     def init_pos(self, motor :str, verbose=None, Fprint = None):
+        '''
+        Initialize the position of the motor.
+
+                Parameters:
+                    motor (str): 'spec' or 'filter'
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+                
+                Returns:
+                    0 (int): 0 (if everything is ok)
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -220,6 +301,20 @@ class motors:
         return 0
 
     def goto(self, motor: str, pos:int, verbose=None, Fprint = None):
+        '''
+        Go to a position.
+
+                Parameters:
+                    motor (str): 'spec' or 'filter'
+                    pos (int): position in steps
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+
+                Returns:
+                    pos (int): position in steps
+                    limit (int): 0 if no limit is reached, 1 if clockwise limit is reached, -1 if counter-clockwise limit is reached.
+        '''
+
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:
@@ -240,6 +335,20 @@ class motors:
         return int(RXD[0]), limit
 
     def jump(self, motor: str, jump: int, verbose=None, Fprint = None):
+        '''
+        Jump a number of steps.
+
+                Parameters:
+                    motor (str): 'spec' or 'filter'
+                    jump (int): number of steps to jump
+                    verbose (bool): Print the response or not
+                    Fprint (function): Function to print the response. Default is print.
+                
+                Returns:
+                    pos (int): position in steps
+                    limit (int): 0 if no limit is reached, 1 if clockwise limit is reached, -1 if counter-clockwise limit is reached.
+        '''
+        
         if verbose is None:
             verbose = self.verbose
         if Fprint is None:

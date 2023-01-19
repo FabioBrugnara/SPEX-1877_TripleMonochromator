@@ -1,0 +1,1 @@
+SPEX-1877 Triple-monochromator. High suppression is accomplished with two stages: wavelength selectable bandpass stage (blue) and a spectrograph stage (pink). Internal mirrors (M), gratings (G), and entrance and beam block slits (S) are shown with the beam path designated by the dashed line.  

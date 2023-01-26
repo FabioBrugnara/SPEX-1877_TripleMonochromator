@@ -5,8 +5,10 @@
 const byte numChars = 40;       // lenght of the recived command (in chars)
 char Command[numChars];   // an array to store the received command
 char splitCom[4][numChars]; // an array to split the command
+char StopCommand[numChars];   // an array to store the received command
 
 boolean newCommand = false;
+boolean newStopCommand = false;
 
 
 // PINSS
@@ -134,11 +136,37 @@ void specJump(int steps) {
 
   // do steps
   for (int i = 0; i < abs(steps); i++) {
-    
-    if (digitalRead(specStopcw) == HIGH){
+
+    // check if stop command is received, if any other command is received, ignore it
+    if (Serial.available()>0){
+      static byte ndx = 0;
+      char endMarker = '\n';
+      char rc;
+        newStopCommand = false;
+      while (Serial.available() > 0 && newStopCommand == false) {
+          rc = Serial.read();
+          if (rc != endMarker) {
+              StopCommand[ndx] = rc;
+              ndx++;
+              if (ndx >= numChars) {
+                  ndx = numChars - 1;
+              }
+          }
+          else {
+              StopCommand[ndx] = '\0'; // terminate the string
+              ndx = 0;
+              newStopCommand = true;
+          }
+        if (StopCommand == "stop"){
+          break;
+        }
+      }
+    }    
+    // check if limit switch is reached
+    if (digitalRead(specStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
-    else if (digitalRead(specStopccw) == HIGH){
+    else if (digitalRead(specStopccw) == HIGH && dir == -1){
       error = -1;
       break; }
     else {
@@ -189,10 +217,10 @@ void specGoto(int pos) {
 
   // do steps
   while (specPos != pos) {
-    if (digitalRead(specStopcw) == HIGH){
+    if (digitalRead(specStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
-    else if (digitalRead(specStopccw) == HIGH){
+    else if (digitalRead(specStopccw) == HIGH && dir == -1){
       error = -1;
       break; }
     else {
@@ -244,10 +272,10 @@ void filterJump(int steps) {
   // do steps
   for (int i = 0; i < abs(steps); i++) {
     
-    if (digitalRead(filterStopcw) == HIGH){
+    if (digitalRead(filterStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
-    else if (digitalRead(filterStopccw) == HIGH){
+    else if (digitalRead(filterStopccw) == HIGH && dir == -1){
       error = -1;
       break; }
     else {
@@ -298,10 +326,10 @@ void filterGoto(int pos) {
 
   // do steps
   while (filterPos != pos) {
-    if (digitalRead(filterStopcw) == HIGH){
+    if (digitalRead(filterStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
-    else if (digitalRead(filterStopccw) == HIGH){
+    else if (digitalRead(filterStopccw) == HIGH && dir == -1){
       error = -1;
       break; }
     else {
@@ -352,6 +380,25 @@ void loop() {
 
     else if (strcmp(Command, "whoareyou") == 0){
       Serial.print("Spex motors micro-controller\n");
+      Serial.print("ok\n"); }
+
+    else if (strcmp(Command, "stop") == 0){ }
+
+    else if (strcmp(Command, "help") == 0){
+      Serial.print("status\n");
+      Serial.print("whoareyou\n");
+      Serial.print("stop\n");
+      Serial.print("help\n");
+      Serial.print("spec set_speed <speed>\n");
+      Serial.print("spec read_speed\n");
+      Serial.print("spec read_pos\n");
+      Serial.print("spec goto <pos>\n");
+      Serial.print("spec jump <steps>\n");
+      Serial.print("filter set_speed <speed>\n");
+      Serial.print("filter read_speed\n");
+      Serial.print("filter read_pos\n");
+      Serial.print("filter goto <pos>\n");
+      Serial.print("filter jump <steps>\n");
       Serial.print("ok\n"); }
 
     // SPECTROMETER COMMANDS

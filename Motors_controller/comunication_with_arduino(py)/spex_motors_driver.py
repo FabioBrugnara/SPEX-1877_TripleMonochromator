@@ -74,11 +74,12 @@ def connect_motors(verbose=True, Fprint = print):
                 ser (serial.Serial): Serial port object, connected to the spex motor controller.
     '''
 
-    COM_list = list_serial_ports()
+    COM_list = serial.tools.list_ports.comports()
     find_port = False
     for port in COM_list:
         # you must change the permissions! : sudo chmod a+rw /dev/ttyUSB0
-        Fprint("Trying "+ port.device + " ...")
+        if verbose:
+            Fprint("Trying "+ port.device + " ...")
         ser = serial.Serial(port=port.device, baudrate=115200, timeout=0.1)
         sleep(2)
 
@@ -98,20 +99,19 @@ def connect_motors(verbose=True, Fprint = print):
     
     if find_port:
         ser.timeout = None
-        Fprint('-------------------------------------------')
-        Fprint('Connected to the spex motor controller!')
-        Fprint('port: ', ser.name)
-        Fprint('description: ', port.description)
-        Fprint('-------------------------------------------')
-        #Fprint("Checking the status ...")
-        #command2serial(ser, 'status', verbose=verbose, Fprint = Fprint)
-
+        if verbose:
+            Fprint('-------------------------------------------')
+            Fprint('Connected to the spex motor controller!')
+            Fprint('port: ', ser.name)
+            Fprint('description: ', port.description)
+            Fprint('-------------------------------------------')
         return motors(ser, verbose=verbose, Fprint = Fprint)
     
     else:
-        Fprint('-------------------------------------------')
-        Fprint('ERROR: Spex motor controller not found')
-        Fprint('-------------------------------------------')
+        if verbose:
+            Fprint('-------------------------------------------')
+            Fprint('ERROR: Spex motor controller not found')
+            Fprint('-------------------------------------------')
         return None
 
 
@@ -134,7 +134,6 @@ class motors:
 
     def __init__(self, port, verbose=True, Fprint = print):
 
-        self.port = port
         self.verbose = verbose
         self.Fprint = Fprint
 

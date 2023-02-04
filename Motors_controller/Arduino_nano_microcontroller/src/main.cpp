@@ -13,24 +13,23 @@ boolean newStopCommand = false;
 
 // PINSS
 
-int specEnablePin = 2;
-int specDirPin = 3;
-int specClockPin = 4;
-int specStopcw = 5;
-int specStopccw = 6;
 
-int filterEnablePin = 7;
-int filterDirPin = 8;
-int filterClockPin = 9;
-int filterStopcw = 10;
-int filterStopccw = 11;
+int specDirPin = 2;
+int specClockPin = 3;
+int specStopcw = 4;
+int specStopccw = 5;
+
+int filterDirPin = 6;
+int filterClockPin = 7;
+int filterStopcw = 8;
+int filterStopccw = 9;
 
 
 // MOTORS parameter
 
-int specMotorMaxSpeed = 100; // steps per second
+int specMotorMaxSpeed = 200; // steps per second
 int specMotorSpeed = specMotorMaxSpeed; // steps per second
-int filterMotorMaxSpeed = 100; // steps per second
+int filterMotorMaxSpeed = 200; // steps per second
 int filterMotorSpeed = filterMotorMaxSpeed; // steps per second
 
 int specPos;
@@ -50,14 +49,12 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 
   // spectrometer
-  pinMode(specEnablePin, OUTPUT);
   pinMode(specDirPin, OUTPUT);
   pinMode(specClockPin, OUTPUT);
   pinMode(specStopcw, INPUT);
   pinMode(specStopccw, INPUT);
 
   // filter
-  pinMode(filterEnablePin, OUTPUT);
   pinMode(filterDirPin, OUTPUT);
   pinMode(filterClockPin, OUTPUT);
   pinMode(filterStopcw, INPUT);
@@ -121,8 +118,6 @@ void specJump(int steps) {
 
   int error = 0;
 
-  // enable motor
-  digitalWrite(specEnablePin, HIGH);
 
   // set direction
   int dir = steps/abs(steps);
@@ -132,7 +127,7 @@ void specJump(int steps) {
     digitalWrite(specDirPin, LOW);
 
   // set speed
-  int stepDelay = 1000/specMotorSpeed; // in ms
+  int stepDelay = 1000/specMotorSpeed/2; // in ms
 
   // do steps
   for (int i = 0; i < abs(steps); i++) {
@@ -157,11 +152,12 @@ void specJump(int steps) {
               ndx = 0;
               newStopCommand = true;
           }
-        if (StopCommand == "stop"){
+        if (strcmp(StopCommand, "stop") == 0){
           break;
         }
       }
     }    
+
     // check if limit switch is reached
     if (digitalRead(specStopcw) == HIGH && dir == 1){
       error = 1;
@@ -178,8 +174,6 @@ void specJump(int steps) {
       specPos = specPos + dir;}
   }
 
-  // disable motor
-  digitalWrite(specEnablePin, LOW);
 
   // print position
   Serial.print(specPos);
@@ -199,8 +193,6 @@ void specGoto(int pos) {
   int dir;
   int error = 0;
 
-  // enable motor
-  digitalWrite(specEnablePin, HIGH);
 
   // set direction
   if (pos > specPos) {
@@ -213,10 +205,37 @@ void specGoto(int pos) {
   }
 
   // set speed
-  int stepDelay = 1000/specMotorSpeed; // in ms
+  int stepDelay = 1000/specMotorSpeed/2; // in ms
 
   // do steps
   while (specPos != pos) {
+
+    // check if stop command is received, if any other command is received, ignore it
+    if (Serial.available()>0){
+      static byte ndx = 0;
+      char endMarker = '\n';
+      char rc;
+        newStopCommand = false;
+      while (Serial.available() > 0 && newStopCommand == false) {
+          rc = Serial.read();
+          if (rc != endMarker) {
+              StopCommand[ndx] = rc;
+              ndx++;
+              if (ndx >= numChars) {
+                  ndx = numChars - 1;
+              }
+          }
+          else {
+              StopCommand[ndx] = '\0'; // terminate the string
+              ndx = 0;
+              newStopCommand = true;
+          }
+        if (strcmp(StopCommand, "stop") == 0){
+          break;
+        }
+      }
+    }    
+
     if (digitalRead(specStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
@@ -232,8 +251,6 @@ void specGoto(int pos) {
       specPos = specPos + dir; }
   }
 
-  // disable motor
-  digitalWrite(specEnablePin, LOW);
 
   // print position
   Serial.print(specPos);
@@ -256,8 +273,6 @@ void filterJump(int steps) {
 
   int error = 0;
 
-  // enable motor
-  digitalWrite(filterEnablePin, HIGH);
 
   // set direction
   int dir = steps/abs(steps);
@@ -267,11 +282,38 @@ void filterJump(int steps) {
     digitalWrite(filterDirPin, LOW);
 
   // set speed
-  int stepDelay = 1000/filterMotorSpeed; // in ms
+  int stepDelay = 1000/filterMotorSpeed/2; // in ms
 
   // do steps
   for (int i = 0; i < abs(steps); i++) {
+
+    // check if stop command is received, if any other command is received, ignore it
+    if (Serial.available()>0){
+      static byte ndx = 0;
+      char endMarker = '\n';
+      char rc;
+        newStopCommand = false;
+      while (Serial.available() > 0 && newStopCommand == false) {
+          rc = Serial.read();
+          if (rc != endMarker) {
+              StopCommand[ndx] = rc;
+              ndx++;
+              if (ndx >= numChars) {
+                  ndx = numChars - 1;
+              }
+          }
+          else {
+              StopCommand[ndx] = '\0'; // terminate the string
+              ndx = 0;
+              newStopCommand = true;
+          }
+        if (strcmp(StopCommand, "stop") == 0){
+          break;
+        }
+      }
+    }
     
+    // check if limit switch is reached
     if (digitalRead(filterStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
@@ -287,19 +329,17 @@ void filterJump(int steps) {
       filterPos = filterPos + dir;}
   }
 
-  // disable motor
-  digitalWrite(filterEnablePin, LOW);
 
   // print position
   Serial.print(filterPos);
   Serial.print("\n");
 
   if (error == 1)
-    Serial.print("error: clockwise limit reached/n");
+    Serial.print("error: clockwise limit reached\n");
   else if (error == -1)
-    Serial.print("error: counter-clockwise limit reached/n");
+    Serial.print("error: counter-clockwise limit reached\n");
   else
-    Serial.print("ok/n");
+    Serial.print("ok\n");
 }
 
 
@@ -308,8 +348,6 @@ void filterGoto(int pos) {
   int dir;
   int error = 0;
 
-  // enable motor
-  digitalWrite(filterEnablePin, HIGH);
 
   // set direction
   if (pos > filterPos) {
@@ -322,10 +360,37 @@ void filterGoto(int pos) {
   }
 
   // set speed
-  int stepDelay = 1000/filterMotorSpeed; // in ms
+  int stepDelay = 1000/filterMotorSpeed/2; // in ms
 
   // do steps
   while (filterPos != pos) {
+
+    // check if stop command is received, if any other command is received, ignore it
+    if (Serial.available()>0){
+      static byte ndx = 0;
+      char endMarker = '\n';
+      char rc;
+        newStopCommand = false;
+      while (Serial.available() > 0 && newStopCommand == false) {
+          rc = Serial.read();
+          if (rc != endMarker) {
+              StopCommand[ndx] = rc;
+              ndx++;
+              if (ndx >= numChars) {
+                  ndx = numChars - 1;
+              }
+          }
+          else {
+              StopCommand[ndx] = '\0'; // terminate the string
+              ndx = 0;
+              newStopCommand = true;
+          }
+        if (strcmp(StopCommand, "stop") == 0){
+          break;
+        }
+      }
+    }    
+
     if (digitalRead(filterStopcw) == HIGH && dir == 1){
       error = 1;
       break; }
@@ -341,8 +406,6 @@ void filterGoto(int pos) {
       filterPos = filterPos + dir; }
   }
 
-  // disable motor
-  digitalWrite(filterEnablePin, LOW);
 
   // print position
   Serial.print(filterPos);
@@ -363,6 +426,10 @@ void filterGoto(int pos) {
 //////////////
 
 void loop() {
+
+  // set pins to low
+  digitalWrite(specClockPin, LOW);
+  digitalWrite(filterClockPin, LOW);
 
   readCommand();
   

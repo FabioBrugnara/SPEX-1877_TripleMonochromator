@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         self.T0 = time.time()
         
         self.data = {}
-        self.data['RTD'] = pd.DataFrame(columns=['pos', 'current'])
+        self.data['RTD'] = pd.DataFrame(columns=['position', 'current'])
         self.plots = {}
 
         ### initiallize variables ###
@@ -44,9 +44,13 @@ class MainWindow(QMainWindow):
         self.spinBox_SpecPos.setKeyboardTracking(False)
         self.spinBox_SpecPos.setValue(self.read_pos("spec"))
 
+        self.pushButton_ResetSpec = self.findChild(QtWidgets.QPushButton, "pushButton_ResetSpec")
+
         self.spinBox_FilterPos = self.findChild(QtWidgets.QSpinBox, "spinBox_FilterPos")
         self.spinBox_FilterPos.setKeyboardTracking(False)
         self.spinBox_FilterPos.setValue(self.read_pos("filter"))
+
+        self.pushButton_ResetFilter = self.findChild(QtWidgets.QPushButton, "pushButton_ResetFilter")
 
         self.spinBox_ITime = self.findChild(QtWidgets.QSpinBox, "spinBox_ITime")
         self.spinBox_ITime.setKeyboardTracking(False)
@@ -69,22 +73,41 @@ class MainWindow(QMainWindow):
 
         self.pushButton_measure = self.findChild(QtWidgets.QPushButton, "pushButton_Measure")
 
-        # plots
+        self.tabWidget_plots = self.findChild(QtWidgets.QTabWidget, "tabWidget_plots")
+        self.tabWidget_plots.setMovable(True)
+        self.tabWidget_plots.setCurrentIndex(0)
+
         self.plot_RTD = self.findChild(QtWidgets.QWidget, "plot_RTD")
 
         self.lcd_RTD = self.findChild(QtWidgets.QLCDNumber, "lcdNumber_RTD")
+
         self.comboBox_RTDaxis = self.findChild(QtWidgets.QComboBox, "comboBox_RTDaxis")
         self.comboBox_RTDaxis.addItems(['Time', 'Position'])
+
         self.pushButton_ClearRTD = self.findChild(QtWidgets.QPushButton, "pushButton_ClearRTD")
         
-        # adding graphWidget to the tab
+        self.tab_Measures = self.findChild(QtWidgets.QWidget, "tab_Measures")
 
+        self.spinBox_MeasStart = self.findChild(QtWidgets.QSpinBox, "spinBox_MeasStart")
+        self.spinBox_MeasStart.setKeyboardTracking(False)
+
+        self.spinBox_MeasEnd = self.findChild(QtWidgets.QSpinBox, "spinBox_MeasEnd")
+        self.spinBox_MeasEnd.setKeyboardTracking(False)
+
+        self.spinBox_MeasStep = self.findChild(QtWidgets.QSpinBox, "spinBox_MeasStep")
+        self.spinBox_MeasStep.setKeyboardTracking(False)
+
+        self.lineEdit_MeasName = self.findChild(QtWidgets.QLineEdit, "lineEdit_MeasName")
+
+        ### TAB RTD ###
+
+        # adding graphWidget to the tab
         self.graphWidget_RTDt = pg.PlotWidget()
         self.graphWidget_RTDc = pg.PlotWidget()
-        graphLayout = QtWidgets.QStackedLayout()
-        graphLayout.addWidget(self.graphWidget_RTDt)
-        graphLayout.addWidget(self.graphWidget_RTDc)
-        self.plot_RTD.setLayout(graphLayout)
+        graphLayout_RTD = QtWidgets.QStackedLayout()
+        graphLayout_RTD.addWidget(self.graphWidget_RTDt)
+        graphLayout_RTD.addWidget(self.graphWidget_RTDc)
+        self.plot_RTD.setLayout(graphLayout_RTD)
         
         # Styling the graph
         self.graphWidget_RTDt.setBackground('w')
@@ -99,11 +122,31 @@ class MainWindow(QMainWindow):
         self.graphWidget_RTDc.showGrid(x=True, y=True)
         self.graphWidget_RTDc.addLegend()
 
-
-        # plot data: x, y values
+        # define the plot objects
         pen = pg.mkPen(color='r', width=5) #, style=QtCore.Qt.PenStyle.DashLine)
         self.plots['RTDt'] = self.graphWidget_RTDt.plot(self.data['RTD'].index, self.data['RTD'].current, pen=pen, name='RTD', symbol='o', symbolSize=10, symbolBrush=('b'))
-        self.plots['RTDc'] = self.graphWidget_RTDc.plot(self.data['RTD'].pos, self.data['RTD'].current, pen=pen, name='RTD', symbol='o', symbolSize=10, symbolBrush=('b'))
+        self.plots['RTDc'] = self.graphWidget_RTDc.plot(self.data['RTD'].position, self.data['RTD'].current, pen=pen, name='RTD', symbol='o', symbolSize=10, symbolBrush=('b'))
+
+
+        ### TAB MEASURE ###
+        
+        # adding graphWidget to the tab
+        self.graphWidget_Measures = pg.PlotWidget()
+        #self.tab_Measures.layout().addWidget(self.graphWidget_Measures)
+        graphLayout_Measures = QtWidgets.QVBoxLayout()
+        graphLayout_Measures.addWidget(self.graphWidget_Measures)
+        self.tab_Measures.setLayout(graphLayout_Measures)
+        
+
+
+        # Styling the graph
+        self.graphWidget_Measures.setBackground('w')
+        self.graphWidget_Measures.setLabel('left', 'Current [A]')
+        self.graphWidget_Measures.setLabel('bottom', 'Position [steps]')
+        self.graphWidget_Measures.showGrid(x=True, y=True)
+        self.graphWidget_Measures.addLegend()
+
+
 
 
         ### connect the signals ###
@@ -117,7 +160,12 @@ class MainWindow(QMainWindow):
 
         self.pushButton_ClearRTD.clicked.connect(self.GUI_clearRTD)
 
-        self.comboBox_RTDaxis.currentIndexChanged.connect(graphLayout.setCurrentIndex)
+        self.comboBox_RTDaxis.currentIndexChanged.connect(graphLayout_RTD.setCurrentIndex)
+
+        self.pushButton_measure.clicked.connect(self.GUI_Measure)
+
+        self.pushButton_ResetSpec.clicked.connect(lambda: self.GUI_reset_pos("spec"))
+        self.pushButton_ResetFilter.clicked.connect(lambda: self.GUI_reset_pos("filter"))
         
 
     def read_pos(self, motor):
@@ -132,7 +180,25 @@ class MainWindow(QMainWindow):
         ### simulate the true read_Itime function
         return 100
         ###
-    
+
+    def GUI_reset_pos(self, motor):
+        self.statusbar.showMessage('resetting position of ' + motor)
+        self.frame_controls.setEnabled(False)
+        self.pushButton_measure.setEnabled(False)
+        self.pushButton_RTD.setEnabled(False)
+
+        if motor == "filter":
+            time.sleep(0.1)
+            self.spinBox_FilterPos.setValue(0)
+        elif motor == "spec":
+            time.sleep(0.1)
+            self.spinBox_SpecPos.setValue(0)
+
+        self.statusbar.showMessage('Ready')
+        self.frame_controls.setEnabled(True)
+        self.pushButton_measure.setEnabled(True)    
+        self.pushButton_RTD.setEnabled(True)    
+
     def RealTimeDisplay(self, newData_callback):
         while self.pushButton_RTD.isChecked():
             time.sleep(0.1) #jump
@@ -143,6 +209,7 @@ class MainWindow(QMainWindow):
 
     def GUI_RTD(self):
         if self.pushButton_RTD.isChecked():
+            self.tabWidget_plots.setCurrentIndex(0)
             worker = Worker(self.RealTimeDisplay)
 
             worker.signals.started.connect(lambda: self.statusbar.showMessage("RTD..."))
@@ -159,19 +226,57 @@ class MainWindow(QMainWindow):
     def GUI_plotNewData(self, newData):
         if newData == 'RTD':
             self.plots['RTDt'].setData(list(self.data['RTD'].index), list(self.data['RTD'].current))
-            self.plots['RTDc'].setData(list(self.data['RTD'].pos), list(self.data['RTD'].current))
+            self.plots['RTDc'].setData(list(self.data['RTD'].position), list(self.data['RTD'].current))
             self.lcd_RTD.display(list(self.data['RTD'].current)[-1])
+        else:
+            try:
+                self.plots[newData].setData(list(self.data[newData].position), list(self.data[newData].current))
+            except:
+                self.plots[newData] = self.graphWidget_Measures.plot(list(self.data[newData].position), list(self.data[newData].current), pen=pg.mkPen(color='r', width=5), name=newData, symbol='o', symbolSize=10, symbolBrush=('b'))
 
     def GUI_clearRTD(self):
         self.data['RTD'] = pd.DataFrame(columns=['position', 'current'])
         self.plots['RTDt'].setData(list(self.data['RTD'].index), list(self.data['RTD'].current))
-        self.plots['RTDc'].setData(list(self.data['RTD'].pos), list(self.data['RTD'].current))
+        self.plots['RTDc'].setData(list(self.data['RTD'].position), list(self.data['RTD'].current))
         self.lcd_RTD.display(0)
+    
+
+    def Measure(self, MeasName, newData_callback):
+
+        vec_pos = np.arange(self.spinBox_MeasStart.value(), self.spinBox_MeasEnd.value(), self.spinBox_MeasStep.value())
+
+        for pos in vec_pos:
+            ### simulate the true measure function
+            time.sleep(1)
+            print('measuring')
+            ###
+            self.data[MeasName].loc[time.time()-self.T0] = [int(pos), np.random.randint(0, 100)]
+            newData_callback.emit(MeasName)
+
+        
+
+    def GUI_Measure(self):
+        self.tabWidget_plots.setCurrentIndex(1)
+        MeasName = self.lineEdit_MeasName.text()
+        if MeasName not in self.data.keys():
+            self.data[MeasName] = pd.DataFrame(columns=['position', 'current'])
+
+        worker = Worker(self.Measure, MeasName=MeasName)
+
+        worker.signals.started.connect(lambda: self.statusbar.showMessage("Measuring..."))
+        worker.signals.started.connect(lambda: self.frame_controls.setEnabled(False))
+        worker.signals.started.connect(lambda: self.pushButton_RTD.setEnabled(False))
+        worker.signals.started.connect(lambda: self.pushButton_measure.setEnabled(False))
+        worker.signals.finished.connect(lambda: self.statusbar.showMessage("Ready"))
+        worker.signals.finished.connect(lambda: self.frame_controls.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.pushButton_RTD.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.pushButton_measure.setEnabled(True))
+
+        worker.signals.newData.connect(self.GUI_plotNewData)
+
+        self.threadpool.start(worker)
 
 
-
-
-    ###### GUI FUNCTIONS ########
     def GUI_goto(self, motor):
         ### simulate the true goto function, change this
         def goto(motor):
@@ -191,9 +296,11 @@ class MainWindow(QMainWindow):
         worker.signals.started.connect(lambda: self.statusbar.showMessage("Moving..."))
         worker.signals.started.connect(lambda: self.groupBox_motors.setEnabled(False))
         worker.signals.started.connect(lambda: self.pushButton_measure.setEnabled(False))
+        worker.signals.started.connect(lambda: self.pushButton_RTD.setEnabled(False))
         worker.signals.finished.connect(lambda: self.statusbar.showMessage("Ready"))
         worker.signals.finished.connect(lambda: self.groupBox_motors.setEnabled(True))
-        worker.signals.started.connect(lambda: self.pushButton_measure.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.pushButton_measure.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.pushButton_RTD.setEnabled(True))
 
         # Execute
         self.threadpool.start(worker)
@@ -211,9 +318,11 @@ class MainWindow(QMainWindow):
         worker.signals.started.connect(lambda: self.statusbar.showMessage("Setting integration time..."))
         worker.signals.started.connect(lambda: self.groupBox_detector.setEnabled(False))
         worker.signals.started.connect(lambda: self.pushButton_measure.setEnabled(False))
+        worker.signals.started.connect(lambda: self.pushButton_RTD.setEnabled(False))
         worker.signals.finished.connect(lambda: self.statusbar.showMessage("Ready"))
         worker.signals.finished.connect(lambda: self.groupBox_detector.setEnabled(True))
         worker.signals.finished.connect(lambda: self.pushButton_measure.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.pushButton_RTD.setEnabled(True))
         
         self.threadpool.start(worker)
 
@@ -293,8 +402,9 @@ class Worker(QRunnable):
         self.signals.started.emit() # start signal
 
         try:
-            result = self.fn(*self.args, **self.kwargs, newData_callback=self.signals.newData) # run the function with new_data keyword
+            result = self.fn(*self.args, **self.kwargs) # run the function with new_data keyword
         except:
+            self.kwargs['newData_callback'] = self.signals.newData
             result = self.fn(*self.args, **self.kwargs)
 
         self.signals.result.emit(result)  # Return the result of the processing
